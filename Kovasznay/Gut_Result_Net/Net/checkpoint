@@ -1,0 +1,2 @@
+model_checkpoint_path: "PINN.ckpt"
+all_model_checkpoint_paths: "PINN.ckpt"
