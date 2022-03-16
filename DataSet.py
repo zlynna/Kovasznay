@@ -80,7 +80,7 @@ class DataSet:
         feq_pre = self.feq_gradient(rou, u, v, x, y)
         R_sum = 0
         for k in range(9):
-            fneq_x = tf.gradients(f_neq, x)[0]
+            fneq_x = tf.gradients(f_neq[:, k][:, None], x)[0]
             fneq_y = tf.gradients(f_neq[:, k][:, None], y)[0]
             R = (self.xi[k, 0] * fneq_x + self.xi[k, 1] * fneq_y + feq_pre[:, k][:, None] + 1 / self.tau * (f_neq[:, k][:, None])) ** 2
             R_sum = R_sum + R
