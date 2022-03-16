@@ -86,6 +86,20 @@ class DataSet:
             R_sum = R_sum + R
         return R_sum
 
+    def bgk_feq(self, feq, fneq, x, y):
+        R_sum = 0
+        Eq_sum = x * 0
+        for k in range(9):
+            feq_x = tf.gradients(feq[:, k][:, None], x)[0]
+            feq_y = tf.gradients(feq[:, k][:, None], y)[0]
+            fneq_x = tf.gradients(fneq[:, k][:, None], x)[0]
+            fneq_y = tf.gradients(fneq[:, k][:, None], y)[0]
+            R = (self.xi[k, 0] * (feq_x + fneq_x) + self.xi[k, 1] * (feq_y + fneq_y) + fneq[:, k][:, None] / self.tau) ** 2
+            Eq = tf.abs(self.xi[k, 0] * (feq_x + fneq_x) + self.xi[k, 1] * (feq_y + fneq_y) + fneq[:, k][:, None] / self.tau)
+            R_sum = R_sum + R
+            Eq_sum = tf.concat([Eq_sum, Eq], 1)
+        return R_sum, Eq_sum[:, 1:]
+
     # the equation residual
     def Eq_res(self, f_neq, rou, u, v, x, y):
         feq_pre = self.feq_gradient(rou, u, v, x, y)
@@ -127,7 +141,7 @@ class DataSet:
         feq_ex = self.Ex_fneq_(rou, u, v, x_bc, y_bc)
         fbc_sum = 0
         for i in range(9):
-            f = (f_neq_nn[:, i][:, None] + self.tau * feq_ex[:, i][:, None] * 1e4) ** 2
+            f = (f_neq_nn[:, i][:, None] * 0.2 + self.tau * feq_ex[:, i][:, None] * 2e3) ** 2
             fbc_sum = fbc_sum + f
         return fbc_sum
 
@@ -183,10 +197,12 @@ class DataSet:
         # domain data
         x_data = np.random.random((11000, 1)) - 0.5
         y_data = np.random.random((11000, 1)) * 2 - 0.5
-        x_data_1 = np.random.random((6000, 1)) * 1.5 + 0.5
-        y_data_1 = np.random.random((6000, 1)) * 2 - 0.5
-        X_data = np.vstack((x_data, x_data_1))
-        Y_data = np.vstack((y_data, y_data_1))
+        x_data_1 = np.random.random((2000, 1)) * 1.5 + 0.5
+        y_data_1 = np.random.random((2000, 1)) * 2 - 0.5
+        x_data_2 = np.random.random((4000, 1)) * 0.5 + 0.5
+        y_data_2 = np.random.random((4000, 1)) * 2 - 0.5
+        X_data = np.vstack((x_data, x_data_1, x_data_2))
+        Y_data = np.vstack((y_data, y_data_1, y_data_2))
 
         # boundary data
         x_1 = (x_u - x_l) * np.random.random((300, 1)) + x_l
