@@ -53,13 +53,15 @@ def main():
     loss = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
            tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
            tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
-           tf.reduce_mean(bgk) * 2 + \
+           tf.reduce_mean(bgk_bc) + \
+           tf.reduce_mean(bgk) + \
            tf.reduce_mean(fneq_bc)
 
     loss_l = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
            tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
            tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
-           tf.reduce_mean(bgk) * 2 + \
+           tf.reduce_mean(bgk_bc) + \
+           tf.reduce_mean(bgk) + \
            tf.reduce_mean(fneq_bc)
 
     # only f_neq
