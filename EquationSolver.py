@@ -41,6 +41,7 @@ def main():
     [rou_bc_pre, u_bc_pre, v_bc_pre] = net_eq(x_bc_train, y_bc_train)
     fneq_bc_pre_nn = net_neq(x_bc_train, y_bc_train)
     fneq_bc_pre = fneq_bc_pre_nn / 1e4
+    feq_pre = data.f_eq(rou_pre, u_pre, v_pre)
 
     bgk = data.bgk(fneq_pre, rou_pre, u_pre, v_pre, x_train, y_train)
     bgk_bc = data.bgk(fneq_bc_pre, rou_bc_pre, u_bc_pre, v_bc_pre, x_bc_train, y_bc_train)
@@ -52,8 +53,13 @@ def main():
     loss = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
            tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
            tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
-           tf.reduce_mean(bgk) + \
-           tf.reduce_mean(bgk_bc) + \
+           tf.reduce_mean(bgk) * 2 + \
+           tf.reduce_mean(fneq_bc)
+
+    loss_l = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
+           tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
+           tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
+           tf.reduce_mean(bgk) * 2 + \
            tf.reduce_mean(fneq_bc)
 
     # only f_neq
@@ -64,11 +70,11 @@ def main():
            tf.reduce_mean(tf.square(u_pre - u_t)) + \
            tf.reduce_mean(tf.square(v_pre - v_t)) + \
            tf.reduce_mean(tf.square(fneq_pre - fneq_do) * 1e6)
-    
+
     """updata_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(updata_ops):"""
     train_adam = tf.train.AdamOptimizer(learning_rate=8e-4).minimize(loss)
-    train_lbfgs = tf.contrib.opt.ScipyOptimizerInterface(loss,
+    train_lbfgs = tf.contrib.opt.ScipyOptimizerInterface(loss_l,
                                                          method="L-BFGS-B",
                                                          options={'maxiter': 70000,
                                                                   'ftol': 1.0 * np.finfo(float).eps
@@ -85,8 +91,8 @@ def main():
 
     Model = Train(tf_dict)
     start_time = time.perf_counter()
-    Model.LoadModel(sess)
-    #Model.ModelTrain(sess, loss, train_adam, train_lbfgs)
+    # Model.LoadModel(sess)
+    Model.ModelTrain(sess, loss, loss_l, train_adam, train_lbfgs)
 
     stop_time = time.perf_counter()
     print('Duration time is %.3f seconds' % (stop_time - start_time))
@@ -94,7 +100,7 @@ def main():
     NX_test = 125
     NY_test = 100
     Plotter = Plotting(x_range, NX_test, y_range, NY_test, sess)
-    Plotter.Saveplot(u_pre, v_pre, fneq_pre, Eq_res, x_train, y_train)
+    Plotter.Saveplot(u_pre, v_pre, feq_pre, fneq_pre, Eq_res, x_train, y_train)
 
 if __name__ == '__main__':
     main()
