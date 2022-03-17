@@ -141,7 +141,7 @@ class DataSet:
         feq_ex = self.Ex_fneq_(rou, u, v, x_bc, y_bc)
         fbc_sum = 0
         for i in range(9):
-            f = (f_neq_nn[:, i][:, None] * 0.2 + self.tau * feq_ex[:, i][:, None] * 2e3) ** 2
+            f = (f_neq_nn[:, i][:, None] * 0.6 + self.tau * feq_ex[:, i][:, None] * 6e3) ** 2
             fbc_sum = fbc_sum + f
         return fbc_sum
 
