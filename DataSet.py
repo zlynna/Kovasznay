@@ -141,7 +141,7 @@ class DataSet:
         feq_ex = self.Ex_fneq_(rou, u, v, x_bc, y_bc)
         fbc_sum = 0
         for i in range(9):
-            f = (f_neq_nn[:, i][:, None] * 0.6 + self.tau * feq_ex[:, i][:, None] * 6e3) ** 2
+            f = (f_neq_nn[:, i][:, None] + self.tau * feq_ex[:, i][:, None] * 1e4) ** 2
             fbc_sum = fbc_sum + f
         return fbc_sum
 
@@ -153,7 +153,7 @@ class DataSet:
         return v
 
     def p_func(self, x):
-        p = self.p_0 * (1 - 0.5 * np.exp(2 * self.lamda * x)) + self.RT
+        p = self.p_0 * (1 - np.exp(2 * self.lamda * x)) + self.RT
         return p
 
     def rou_func(self, p):
@@ -161,7 +161,7 @@ class DataSet:
         return rou
 
     def Ex_fneq_(self, rou, u, v, x, y):
-        rou_x = (-self.lamda * self.p_0 * np.exp(2 * self.lamda * x)) / self.RT
+        rou_x = (-2 * self.lamda * self.p_0 * np.exp(2 * self.lamda * x)) / self.RT
         rou_y = 0.
         u_x = -self.u_0 * self.lamda * np.cos(2 * np.pi * y) * np.exp(self.lamda * x)
         u_y = 2 * np.pi * self.u_0 * np.sin(2 * np.pi * y) * np.exp(self.lamda * x)
