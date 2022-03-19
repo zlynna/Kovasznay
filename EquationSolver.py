@@ -58,11 +58,11 @@ def main():
            tf.reduce_mean(fneq_bc)
 
     loss_l = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
-           tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
-           tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
-           tf.reduce_mean(bgk_bc) + \
-           tf.reduce_mean(bgk) + \
-           tf.reduce_mean(fneq_bc)
+             tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
+             tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
+             tf.reduce_mean(bgk) + \
+             tf.reduce_mean(bgk_bc) + \
+             tf.reduce_mean(fneq_bc)
 
     # only f_neq
     loss_ = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
@@ -75,14 +75,18 @@ def main():
 
     """updata_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(updata_ops):"""
-    train_adam = tf.train.AdamOptimizer(learning_rate=8e-4).minimize(loss)
+    start_lr = 1e-2
+    learning_rate = tf.train.exponential_decay(start_lr, global_step=5e4, decay_rate=1-5e-3, decay_steps=100)
+    train_adam = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
     train_lbfgs = tf.contrib.opt.ScipyOptimizerInterface(loss_l,
                                                          method="L-BFGS-B",
                                                          options={'maxiter': 70000,
-                                                                  'ftol': 1.0 * np.finfo(float).eps
-                                                                  }
+                                                                  'maxfun': 70000,
+                                                                  'maxcor': 100,
+                                                                  'maxls': 100,
+                                                                  'ftol': 1.0 * np.finfo(float).eps}
                                                          )
-
+    # 'ftol': 1.0 * np.finfo(float).eps
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
