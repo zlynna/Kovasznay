@@ -21,14 +21,15 @@ def main():
 
     data = DataSet(x_range, y_range, NX, Ny, N_bc)
     # input data
-    x_data, y_data, x_bc, y_bc, u_data, v_data, rou_data, u_do, v_do, fneq_do = data.Data_Generation()
+    x_data, y_data, x_bc, y_bc, x_fneq, y_fneq, u_data, v_data, rou_data, u_do, v_do, rho_do, fneq_data = data.Data_Generation()
     # size of the DNN
     layers_eq = [2] + 6 * [50] + [3]
     layers_neq = [2] + 5 * [40] + [9]
     # definition of placeholder
     [x_train, y_train] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(2)]
+    [x_ftr, y_ftr] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(2)]
     [x_bc_train, y_bc_train] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(2)]
-    [u_t, v_t] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(2)]
+    [u_t, v_t, rho_t] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(3)]
     [u_train, v_train, rou_train] = [tf.placeholder(tf.float32, shape=[None, 1]) for _ in range(3)]
     fneq_t = tf.placeholder(tf.float32, shape=[None, 9])
     # definition of nn
@@ -37,15 +38,15 @@ def main():
 
     [rou_pre, u_pre, v_pre] = net_eq(x_train, y_train)
     fneq_pre_nn = net_neq(x_train, y_train)
-    fneq_pre = fneq_pre_nn / 1e4
+    fneq_pre = fneq_pre_nn / 1e5
     [rou_bc_pre, u_bc_pre, v_bc_pre] = net_eq(x_bc_train, y_bc_train)
-    fneq_bc_pre_nn = net_neq(x_bc_train, y_bc_train)
-    fneq_bc_pre = fneq_bc_pre_nn / 1e4
+    fneq_pre_nn = net_neq(x_ftr, y_ftr)
+    fneq_bc_pre = fneq_pre_nn / 1e5
     feq_pre = data.f_eq(rou_pre, u_pre, v_pre)
 
     bgk = data.bgk(fneq_pre, rou_pre, u_pre, v_pre, x_train, y_train)
     bgk_bc = data.bgk(fneq_bc_pre, rou_bc_pre, u_bc_pre, v_bc_pre, x_bc_train, y_bc_train)
-    fneq_bc = data.fBC(fneq_bc_pre_nn, rou_train, u_train, v_train, x_bc, y_bc)
+    fneq_bc = data.fBC(fneq_pre_nn, rho_t, u_t, v_t, x_fneq, y_fneq)
     Eq_res = data.Eq_res(fneq_pre, rou_pre, u_pre, v_pre, x_train, y_train)
 
 
@@ -66,12 +67,12 @@ def main():
 
     # only f_neq
     loss_ = tf.reduce_mean(tf.square(u_bc_pre - u_train)) + \
-           tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
-           tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
-           tf.reduce_mean(tf.square(rou_pre - 1)) + \
-           tf.reduce_mean(tf.square(u_pre - u_t)) + \
-           tf.reduce_mean(tf.square(v_pre - v_t)) + \
-           tf.reduce_mean(tf.square(fneq_pre - fneq_do) * 1e6)
+            tf.reduce_mean(tf.square(v_bc_pre - v_train)) + \
+            tf.reduce_mean(tf.square(rou_bc_pre - rou_train)) + \
+            tf.reduce_mean(tf.square(rou_pre - 1)) + \
+            tf.reduce_mean(tf.square(u_pre - u_t)) + \
+            tf.reduce_mean(tf.square(v_pre - v_t)) + \
+            tf.reduce_mean(tf.square(fneq_pre - fneq_data) * 1e6)
 
     """updata_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(updata_ops):"""
@@ -93,7 +94,7 @@ def main():
     tf_dict = {x_train: x_data, y_train: y_data, 
                x_bc_train: x_bc, y_bc_train: y_bc, 
                u_train: u_data, v_train: v_data, rou_train: rou_data,
-               u_t: u_do, v_t: v_do, fneq_t: fneq_do}
+               u_t: u_do, v_t: v_do, fneq_t: fneq_data}
 
     Model = Train(tf_dict)
     start_time = time.perf_counter()
