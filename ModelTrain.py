@@ -18,6 +18,7 @@ class Train:
     def ModelTrain(self, sess, loss, train_adam, train_lbfgs):
         n = 0
         nmax = 50000
+
         loss_c = 1.0e-3
         loss_ = 1.0
 

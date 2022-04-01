@@ -9,6 +9,8 @@ from net import Net
 from ModelTrain import Train
 from Plotting import Plotting
 
+
+
 np.random.seed(1234)
 tf.set_random_seed(1234)
 
