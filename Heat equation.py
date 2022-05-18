@@ -3,8 +3,7 @@ import deepxde as dde
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from utilities import relative_error_
-from mpl_toolkits.mplot3d import Axes3D
+from utilities import relative_error_, mkdir
 
 class Heat_E:
     #Initialize the class
@@ -28,14 +27,14 @@ class Heat_E:
         [self.yb_pre, _, _] = self.net_y(self.xb_tf)
 
         # loss
-        self.Heat_conduction = self.Heat_conduction(self.yt_pre, self.yxx_pre)
+        self.Heat_cond = self.Heat_conduction(self.yt_pre, self.yxx_pre)
         self.u_initial = self.initial_condition(self.xb)
         self.loss = tf.reduce_mean(tf.square(self.yb_pre[100:])) + \
                     tf.reduce_mean(tf.square((self.u_initial - self.yb_pre[:100]))) + \
-                    tf.reduce_mean(tf.square(self.Heat_conduction))
+                    tf.reduce_mean(tf.square(self.Heat_cond))
 
         # tensorboard
-        self.L_eq = tf.reduce_mean(tf.square(self.Heat_conduction))
+        self.L_eq = tf.reduce_mean(tf.square(self.Heat_cond))
         self.L_initial = tf.reduce_mean(tf.square(self.u_initial - self.yb_pre[:100]))
         self.L_boud = tf.reduce_mean(tf.square(self.yb_pre[100:]))
         tf.summary.scalar('loss_eq', self.L_eq)
@@ -106,7 +105,7 @@ class Heat_E:
             self.sess.run(self.train_op, tf_dict)
 
             # Print
-            if it % 100 == 0:
+            if it % 1000 == 0:
                 elapsed = time.time() - start_time
                 loss_value = self.sess.run(self.loss, tf_dict)
                 s = self.sess.run(self.summ, tf_dict)
@@ -167,10 +166,10 @@ class Heat_E:
 
         # Process the data and flatten it out (like labels and features):
         xx, tt = np.meshgrid(x, t)
-        X = np.vstack((np.ravel(xx), np.ravel(tt))).T
-        y = exact.T.reshape(-1, 1)
+        X = np.vstack((np.ravel(tt), np.ravel(xx))).T
+        y = exact.flatten()[:, None]
 
-        return X, y, x, t
+        return X, y, xx, tt
 
     def predict(self, x_star):
         tf_dict = {self.x_tf: x_star}
@@ -179,11 +178,11 @@ class Heat_E:
 
 if __name__ == "__main__":
     a = 0.4  # Thermal diffusivity
-    L = 1.0  # Length of the bar
+    L = 1.  # Length of the bar
     n = 1  # Frequency of the sinusoidal initial conditions
     lb = np.array([[0.], [0.]])
     ub = np.array([[L], [1.]])
-    layers = [2] + [20] * 2 + [1]
+    layers = [2] + [20] * 3 + [1]
     # domain data
     x_domain = np.random.random((2000, 1))
     t_domain = np.random.random((2000, 1))
@@ -200,18 +199,44 @@ if __name__ == "__main__":
     X_b = np.hstack((t_b, x_b))
 
     model = Heat_E(X, X_b, layers=layers, learning_rate=0.001)
-    model.train(10000)
+    model.train(1)
 
     model.gen_exact_solution()
-    [X_t, u, x, t] = model.gen_testdata()
+    [X_t, u, xx, tt] = model.gen_testdata()
     u_test = model.predict(X_t)
+    u_exact = model.heat_eq_exact_solution(X_t[:, 1], X_t[:, 0])
 
-    error = relative_error_(u_test, u)
+    error = relative_error_(u_test, u_exact)
     print('Error u: %e' % (error))
 
-    # plot
-    """plt.figure()
-    ax = plt.axes(projection=Axes3D.name)
-    ax.plot3D(X_t[:, 0:1].flatten(), X_t[:, 1:2].flatten(), u.flatten(), ".")
+    SavePath = './Result/'
+    mkdir(SavePath)
+
+    """# plot
+    plt.rcParams['font.sans-serif'] = 'Times New Roman'
+    fig = plt.figure()
+    ax1 = plt.subplot(121)
+    U_test = u_test.reshape((201, 256))
+    levels = np.linspace(u_test.min(), u_test.max(), 30)
+    gra = plt.contourf(xx, tt, U_test, cmap='jet', levels=levels)
+    fig.colorbar(gra, ax=ax1)
+    ax1.set(title='PINN', xlabel='x', ylabel='t')
+
+    ax2 = plt.subplot(122)
+    U_exact = u_exact.reshape((201, 256))
+    levels = np.linspace(u_exact.min(), u_exact.max(), 30)
+    gra = plt.contourf(xx, tt, U_exact, cmap='jet', levels=levels)
+    fig.colorbar(gra, ax=ax2)
+    ax2.set(title='Exact', xlabel='x', ylabel='t')
+
+    ax3 = plt.subplot(133)
+    u_dif = np.abs(u_test - u_exact)
+    U_dif = u_dif.reshape((201, 256))
+    levels = np.linspace(u_dif.min(), u_dif.max(), 30)
+    gra = plt.contourf(xx, tt, U_dif, cmap='jet', levels=levels)
+    fig.colorbar(gra, ax=ax3)
+    ax3.set(title='Error', xlabel='x', ylabel='t')
+    plt.subplots_adjust(wspace=0.5)
+    plt.savefig(SavePath + 'Heat Equation_Exact Solution.png', dpi=150)
 
     plt.show()"""
